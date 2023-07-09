@@ -1,15 +1,15 @@
-﻿using System.Text;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
-namespace Matrices_operations;
+namespace MatrixLib;
 
-public class Matrix
+public partial class Matrix
 {
     private int[,] _array;
     private int _rows, _columns;
 
     public int Rows => _rows;
     public int Columns => _columns;
-
     public int this[int i, int j]
     {
         get
@@ -38,6 +38,18 @@ public class Matrix
         _array = new int[rows, columns];
     }
 
+    public Matrix(int[,] array)
+    {
+        if (array == null)
+            throw new NullReferenceException();
+
+        _array = array.Clone() as int[,];
+        _rows = array.GetLength(0);
+        _columns = array.GetLength(1);
+    }
+
+
+
     /// <summary>
     /// Deep copy constructor
     /// </summary>
@@ -45,64 +57,16 @@ public class Matrix
     {
         _rows = previousMatrix._rows;
         _columns = previousMatrix._columns;
-        _array = previousMatrix._array.Clone() as int[,];
-    } 
+        _array = previousMatrix?._array?.Clone() as int[,];
+    }
     #endregion
-
-    public void FillRandomValue(int minValue, int maxValue)
-    {
-        var random = new Random();
-
-        for (int i = 0; i < _rows; i++)
-        {
-            for (int j = 0; j < _columns; j++)
-            {
-                _array[i, j] = random.Next(minValue, maxValue);
-            }
-        }
-    }
-
-    public Matrix Transpose()
-    {
-        var result = new Matrix(_columns, _rows);
-
-        for (int i = 0; i < _rows; i++)
-        {
-            for (int j = 0; j < _columns; j++)
-            {
-                result._array[j, i] = _array[i, j];
-            }
-        }
-
-        return result;
-    }
-
-    public override string ToString()
-    {
-        var result = new StringBuilder(capacity: _rows*_columns);
-
-        for (int i = 0; i < _rows; i++)
-        {
-            for (int j = 0; j < _columns; j++)
-            {
-                result.Append(_array[i, j] + " ");
-            }
-
-            if (i < _rows - 1) 
-                result.Append("\n");
-        }
-
-        return result.ToString();
-    }
-
-    public bool EqualSize(Matrix otherMatrix) => _rows == otherMatrix._rows && _columns == otherMatrix._columns;
 
     #region Operators
 
     public static Matrix operator +(Matrix matrixA, Matrix matrixB)
     {
         if (!matrixA.EqualSize(matrixB))
-            throw new Exception("Invalid operation! The matrices must be of equal size");
+            throw new InvalidOperationException("Matrix shapes do not match!");
 
         var newMatrix = new Matrix(matrixA._rows, matrixA._columns);
 
@@ -120,7 +84,7 @@ public class Matrix
     public static Matrix operator -(Matrix matrixA, Matrix matrixB)
     {
         if (!matrixA.EqualSize(matrixB))
-            throw new Exception("Invalid operation! The matrices must be of equal size");
+            throw new InvalidOperationException("Matrix shapes do not match!");
 
         var result = new Matrix(matrixA._rows, matrixA._columns);
 
@@ -155,10 +119,28 @@ public class Matrix
         return value * matrix;
     }
 
+    public static Matrix operator *(Matrix matrix, int[] vector)
+    {
+        if (matrix._columns != vector.Length)
+            throw new InvalidOperationException();
+
+        var result = new Matrix(vector.Length, 1);
+
+        for (int i = 0; i < result._rows; i++)
+        {
+            for (int j = 0; j < vector.Length; j++)
+            {
+                result[i, 0] += matrix[i, j] * vector[j];
+            }
+        }
+
+        return result;
+    }
+
     public static Matrix operator *(Matrix matrixA, Matrix matrixB)
     {
         if (matrixA._columns != matrixB._rows)
-            throw new Exception("Invalid operation!");
+            throw new InvalidOperationException();
 
         var result = new Matrix(matrixA._rows, matrixB._columns);
 
@@ -174,6 +156,54 @@ public class Matrix
         }
 
         return result;
+    }
+
+    public static bool operator ==(Matrix matrixA, Matrix matrixB) => Equals(matrixA, matrixB);
+
+    public static bool operator !=(Matrix matrixA, Matrix matrixB) => !Equals(matrixA, matrixB);
+    #endregion
+    #region Override
+
+    public override bool Equals(object? obj)
+    {
+        var otherMatrix = obj as Matrix;
+
+        if (!EqualSize(otherMatrix))
+            return false;
+
+        for (int i = 0; i < _rows; i++)
+        {
+            for (int j = 0; j < _columns; j++)
+            {
+                if (this[i, j] != otherMatrix[i, j])
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    public override int GetHashCode()
+    {
+        return _array.GetHashCode();
+    }
+
+    public override string ToString()
+    {
+        var result = new StringBuilder(capacity: _rows * _columns);
+
+        for (int i = 0; i < _rows; i++)
+        {
+            for (int j = 0; j < _columns; j++)
+            {
+                result.Append(_array[i, j] + " ");
+            }
+
+            if (i < _rows - 1)
+                result.Append("\n");
+        }
+
+        return result.ToString();
     } 
     #endregion
 }
